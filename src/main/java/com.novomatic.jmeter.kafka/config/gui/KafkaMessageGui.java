@@ -11,24 +11,24 @@ import org.apache.jmeter.testelement.TestElement;
 import javax.swing.*;
 import java.awt.*;
 
-public class KafkaJsonMessageGui extends AbstractConfigGui {
+public class KafkaMessageGui extends AbstractConfigGui {
 
     private JSyntaxTextArea jsonTextArea;
 
     private JTextField messageKeyTextField;
 
-    public KafkaJsonMessageGui() {
+    public KafkaMessageGui() {
         init();
     }
 
     @Override
     public String getStaticLabel() {
-        return "Kafka Json Message";
+        return "Kafka Message";
     }
 
     @Override
     public String getLabelResource() {
-        return "kafka_json_message_title";
+        return "kafka_message_title";
     }
 
     @Override

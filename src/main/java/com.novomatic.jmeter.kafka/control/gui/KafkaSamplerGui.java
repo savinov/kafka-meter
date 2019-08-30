@@ -19,12 +19,12 @@ public class KafkaSamplerGui extends AbstractSamplerGui {
 
     @Override
     public String getStaticLabel() {
-        return "Kafka Sampler";
+        return "Kafka Producer";
     }
 
     @Override
     public String getLabelResource() {
-        return "kafka_sampler_title";
+        return "kafka_producer_title";
     }
 
     private void init() {

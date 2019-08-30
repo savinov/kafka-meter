@@ -5,6 +5,7 @@ import com.novomatic.jmeter.kafka.ProducerConstants;
 import org.apache.jmeter.config.Arguments;
 import org.apache.jmeter.samplers.AbstractSampler;
 import org.apache.jmeter.samplers.Entry;
+import org.apache.jmeter.samplers.Interruptible;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.testelement.ThreadListener;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -19,16 +20,18 @@ import java.util.Properties;
 import java.util.concurrent.Future;
 
 
-public class KafkaSampler extends AbstractSampler implements ThreadListener {
+public class KafkaSampler extends AbstractSampler implements ThreadListener, Interruptible {
 
     private static final ThreadLocal<KafkaProducer<String, Object>> threadLocal = new ThreadLocal<>();
 
     private static final Logger log = LoggerFactory.getLogger(KafkaSampler.class);
 
+    private transient volatile KafkaProducer<String, Object> currentProducer; // used for handling interrupt
+
     @Override
     public SampleResult sample(Entry entry) {
         SampleResult sampleResult = new SampleResult();
-        sampleResult.setSampleLabel(getName());
+        sampleResult.setSampleLabel(String.format("%s #%d", getName(), getThreadId()));
         sampleResult.sampleStart();
 
         try {
@@ -40,18 +43,20 @@ public class KafkaSampler extends AbstractSampler implements ThreadListener {
                     .map(s -> new ProducerRecord<>(topic, s, message))
                     .orElseGet(() -> new ProducerRecord<>(topic, message));
             KafkaProducer<String, Object> kafkaProducer = getKafkaProducer();
-            Future<RecordMetadata> sendFuture = kafkaProducer.send(producerRecord);
-            RecordMetadata result = sendFuture.get();
-            sampleResult.setResponseData(result.toString(), StandardCharsets.UTF_8.name());
+            currentProducer = kafkaProducer;
+            Future<RecordMetadata> response = kafkaProducer.send(producerRecord);
+            RecordMetadata recordMetadata = response.get();
+            sampleResult.setSamplerData(recordMetadata.toString());
             sampleResult.setResponseCodeOK();
             sampleResult.setSuccessful(true);
             sampleResult.sampleEnd();
-
         } catch (Exception e) {
             log.error("Failed to send message", e);
-            sampleResult.setResponseData(e.getMessage(), StandardCharsets.UTF_8.name());
+            sampleResult.setResponseData(e.getMessage() == null ? e.toString() : e.getMessage(), StandardCharsets.UTF_8.name());
             sampleResult.setSuccessful(false);
             sampleResult.sampleEnd();
+        } finally {
+            currentProducer = null;
         }
 
         return sampleResult;
@@ -62,10 +67,22 @@ public class KafkaSampler extends AbstractSampler implements ThreadListener {
     }
 
     @Override
+    public boolean interrupt() {
+        Optional<KafkaProducer> producer = Optional.ofNullable(currentProducer); // fetch in case gets nulled later
+        if (producer.isPresent()) {
+            producer.get().close();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
     public void threadFinished() {
         KafkaProducer<String, Object> kafkaProducer = threadLocal.get();
         if (kafkaProducer != null) {
-            log.info("Closing kafka producer. Thread: " + Thread.currentThread().getId());
+            log.info("Closing kafka producer.");
+            threadLocal.remove();
             kafkaProducer.close();
         }
     }
@@ -92,11 +109,15 @@ public class KafkaSampler extends AbstractSampler implements ThreadListener {
     private KafkaProducer<String, Object> getKafkaProducer() {
         KafkaProducer<String, Object> kafkaProducer = threadLocal.get();
         if (kafkaProducer == null) {
-            log.info("Creating kafka producer. Thread: " + Thread.currentThread().getId());
+            log.info("Creating kafka producer.");
             kafkaProducer = createKafkaProducer();
             threadLocal.set(kafkaProducer);
         }
         return kafkaProducer;
+    }
+
+    private int getThreadId() {
+        return getThreadContext().getThreadNum();
     }
 
     private KafkaProducer<String, Object> createKafkaProducer() {

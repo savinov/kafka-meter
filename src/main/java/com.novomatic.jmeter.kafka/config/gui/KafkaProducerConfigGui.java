@@ -37,12 +37,12 @@ public class KafkaProducerConfigGui extends AbstractConfigGui {
 
     @Override
     public String getStaticLabel() {
-        return "Kafka Sampler Config";
+        return "Kafka Producer Config";
     }
 
     @Override
     public String getLabelResource() {
-        return "kafka_sampler_config_title";
+        return "kafka_producer_config_title";
     }
 
     @Override

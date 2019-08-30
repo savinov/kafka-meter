@@ -65,10 +65,6 @@
                                     <excludes>
                                         <exclude>scala/**</exclude>
                                     </excludes>
-<!--                                    <includes>-->
-<!--                                        <include>com/novomatic/**</include>-->
-<!--                                        <include>org/apache/kafka/**</include>-->
-<!--                                    </includes>-->
                                 </filter>
                             </filters>
                         </configuration>
