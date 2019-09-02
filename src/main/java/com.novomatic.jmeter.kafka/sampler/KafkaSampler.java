@@ -19,7 +19,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Future;
 
-
 public class KafkaSampler extends AbstractSampler implements ThreadListener, Interruptible {
 
     private static final ThreadLocal<KafkaProducer<String, Object>> threadLocal = new ThreadLocal<>();
@@ -46,7 +45,7 @@ public class KafkaSampler extends AbstractSampler implements ThreadListener, Int
             currentProducer = kafkaProducer;
             Future<RecordMetadata> response = kafkaProducer.send(producerRecord);
             RecordMetadata recordMetadata = response.get();
-            sampleResult.setSamplerData(recordMetadata.toString());
+            sampleResult.setResponseData(recordMetadata.toString(), StandardCharsets.UTF_8.name());
             sampleResult.setResponseCodeOK();
             sampleResult.setSuccessful(true);
             sampleResult.sampleEnd();
