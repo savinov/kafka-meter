@@ -48,7 +48,7 @@ To run all services, execute the following command:
 docker-compose up -d
 ```
 
-To crate JMeter's plugin, execute the following command:
+To create JMeter's plugin, execute the following command:
 
 ```bash
 mvn package
